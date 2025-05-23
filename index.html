@@ -1,0 +1,236 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rentacar Villarrica - Gestión de Unidades</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f4; }
+    h1, h2 { text-align: center; }
+    .form-group { margin-bottom: 10px; }
+    label { display: block; margin-bottom: 5px; }
+    input, select, button { width: 100%; padding: 8px; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
+    .status { padding: 5px 10px; border-radius: 5px; color: white; }
+    .disponible { background-color: green; }
+    .rentado { background-color: orange; }
+    .mantencion { background-color: red; }
+    .btn-action { margin: 2px; padding: 5px 10px; }
+    #modalValor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+    #modalValor .modal-content { background: white; padding: 20px; width: 90%; max-width: 500px; }
+  </style>
+</head>
+<body>
+  <h1>Gestión de Unidades - Rentacar Villarrica</h1>
+
+  <form id="unidad-form">
+    <input type="hidden" id="unidad-id" />
+    <div class="form-group">
+      <label>Patente</label>
+      <input type="text" id="patente" required />
+    </div>
+    <div class="form-group">
+      <label>Modelo</label>
+      <input type="text" id="modelo" required />
+    </div>
+    <div class="form-group">
+      <label>RUT Cliente</label>
+      <input type="text" id="rut" />
+    </div>
+    <div class="form-group">
+      <label>Fecha Inicio Arriendo</label>
+      <input type="date" id="fecha-inicio" />
+    </div>
+    <div class="form-group">
+      <label>Fecha Fin Arriendo</label>
+      <input type="date" id="fecha-fin" />
+    </div>
+    <div class="form-group">
+      <label>Estado</label>
+      <select id="estado">
+        <option value="Disponible">Disponible</option>
+        <option value="Rentado">Rentado</option>
+        <option value="Mantención">Mantención</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Fecha Próxima Mantención</label>
+      <input type="date" id="fecha-mantencion" />
+    </div>
+    <button type="submit">Guardar Unidad</button>
+  </form>
+
+  <h2>Listado de Unidades</h2>
+  <label for="filtro-estado">Filtrar por Estado:</label>
+  <select id="filtro-estado">
+    <option value="Todos">Todos</option>
+    <option value="Disponible">Disponible</option>
+    <option value="Rentado">Rentado</option>
+    <option value="Mantención">Mantención</option>
+  </select>
+  <button id="btn-asignar-valor">Asignar Valor por Día</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Patente</th>
+        <th>Modelo</th>
+        <th>RUT Cliente</th>
+        <th>Fecha Inicio</th>
+        <th>Fecha Fin</th>
+        <th>Días</th>
+        <th>Valor por Día</th>
+        <th>Estado</th>
+        <th>Próxima Mantención</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="unidades-body"></tbody>
+  </table>
+
+  <div id="modalValor">
+    <div class="modal-content">
+      <h3>Asignar Valores por Día</h3>
+      <div id="valores-container"></div>
+      <button id="guardar-valores">Guardar</button>
+    </div>
+  </div>
+
+  <script>
+    let unidades = [];
+
+    const form = document.getElementById("unidad-form");
+    const unidadesBody = document.getElementById("unidades-body");
+    const filtroEstado = document.getElementById("filtro-estado");
+    const btnAsignarValor = document.getElementById("btn-asignar-valor");
+    const modalValor = document.getElementById("modalValor");
+    const valoresContainer = document.getElementById("valores-container");
+    const guardarValoresBtn = document.getElementById("guardar-valores");
+
+    const unidadIdInput = document.getElementById("unidad-id");
+    const patenteInput = document.getElementById("patente");
+    const modeloInput = document.getElementById("modelo");
+    const rutInput = document.getElementById("rut");
+    const fechaInicioInput = document.getElementById("fecha-inicio");
+    const fechaFinInput = document.getElementById("fecha-fin");
+    const estadoSelect = document.getElementById("estado");
+    const fechaMantencionInput = document.getElementById("fecha-mantencion");
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const id = unidadIdInput.value || Date.now().toString();
+      const nuevaUnidad = {
+        id,
+        patente: patenteInput.value,
+        modelo: modeloInput.value,
+        rut: rutInput.value,
+        valorPorDia: 0,
+        fechaInicio: fechaInicioInput.value,
+        fechaFin: fechaFinInput.value,
+        estado: estadoSelect.value,
+        fechaMantencion: fechaMantencionInput.value
+      };
+
+      const index = unidades.findIndex(u => u.id === id);
+      if (index !== -1) {
+        unidades[index] = nuevaUnidad;
+      } else {
+        unidades.push(nuevaUnidad);
+      }
+
+      form.reset();
+      unidadIdInput.value = "";
+      cargarUnidades();
+    });
+
+    function cargarUnidades() {
+      unidadesBody.innerHTML = "";
+      const filtro = filtroEstado.value;
+      unidades
+        .filter(u => filtro === "Todos" || u.estado === filtro)
+        .forEach(unidad => {
+          const tr = document.createElement('tr');
+          const diasRentados = calcularDias(unidad.fechaInicio, unidad.fechaFin);
+
+          tr.innerHTML = \`
+            <td>\${unidad.patente}</td>
+            <td>\${unidad.modelo}</td>
+            <td>\${unidad.rut}</td>
+            <td>\${unidad.fechaInicio}</td>
+            <td>\${unidad.fechaFin}</td>
+            <td>\${diasRentados}</td>
+            <td>$\${unidad.valorPorDia || 0}</td>
+            <td><span class="status \${unidad.estado.toLowerCase().replace(' ', '')}">\${unidad.estado}</span></td>
+            <td>\${unidad.fechaMantencion}</td>
+            <td>
+              <button class="btn-action btn-edit" onclick="editarUnidad('\${unidad.id}')">Editar</button>
+              <button class="btn-action btn-delete" onclick="eliminarUnidad('\${unidad.id}')">Eliminar</button>
+            </td>
+          \`;
+          unidadesBody.appendChild(tr);
+        });
+    }
+
+    function calcularDias(inicio, fin) {
+      if (!inicio || !fin) return 0;
+      const diff = new Date(fin) - new Date(inicio);
+      return diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
+    }
+
+    function editarUnidad(id) {
+      const unidad = unidades.find(u => u.id === id);
+      if (!unidad) return;
+      unidadIdInput.value = unidad.id;
+      patenteInput.value = unidad.patente;
+      modeloInput.value = unidad.modelo;
+      rutInput.value = unidad.rut;
+      fechaInicioInput.value = unidad.fechaInicio;
+      fechaFinInput.value = unidad.fechaFin;
+      estadoSelect.value = unidad.estado;
+      fechaMantencionInput.value = unidad.fechaMantencion;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function eliminarUnidad(id) {
+      if (confirm("¿Estás seguro de eliminar esta unidad?")) {
+        unidades = unidades.filter(u => u.id !== id);
+        cargarUnidades();
+      }
+    }
+
+    filtroEstado.addEventListener("change", cargarUnidades);
+
+    btnAsignarValor.addEventListener("click", () => {
+      valoresContainer.innerHTML = "";
+      unidades.forEach(unidad => {
+        const div = document.createElement("div");
+        div.innerHTML = \`
+          <label>\${unidad.patente} - \${unidad.modelo}</label>
+          <input type="number" value="\${unidad.valorPorDia}" data-id="\${unidad.id}" min="0" />
+        \`;
+        valoresContainer.appendChild(div);
+      });
+      modalValor.style.display = "flex";
+    });
+
+    guardarValoresBtn.addEventListener("click", () => {
+      const inputs = valoresContainer.querySelectorAll("input");
+      inputs.forEach(input => {
+        const unidad = unidades.find(u => u.id === input.dataset.id);
+        if (unidad) unidad.valorPorDia = parseFloat(input.value) || 0;
+      });
+      modalValor.style.display = "none";
+      cargarUnidades();
+    });
+
+    window.onclick = function(event) {
+      if (event.target === modalValor) {
+        modalValor.style.display = "none";
+      }
+    };
+  </script>
+</body>
+</html>
