@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rentacar Villarrica - Gestión de Unidades</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    margin: 0;
+    padding: 20px;
+    color: #333;
+  }
+  h1 {
+    text-align: center;
+    color: #fff;
+    margin-bottom: 8px;
+    text-shadow: 1px 1px 10px rgba(0,0,0,0.3);
+  }
+  p.lead {
+    text-align: center;
+    color: #d7d7d7;
+    margin-top: 0;
+    margin-bottom: 30px;
+  }
+  .app-container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #f8f9fa;
+    border-radius: 10px;
+    box-shadow: 0 0 40px rgb(0 0 0 / 0.15);
+    padding: 30px 40px;
+  }
+  form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 25px;
+    align-items: center;
+  }
+  form input, form select {
+    padding: 10px 12px;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    flex-grow: 1;
+    min-width: 160px;
+    transition: border-color 0.3s;
+  }
+  form input:focus, form select:focus {
+    border-color: #2575fc;
+    outline: none;
+  }
+  form button {
+    background-color: #2575fc;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    flex-grow: 0;
+  }
+  form button:hover {
+    background-color: #1a4fc0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  thead tr {
+    background: #2575fc;
+    color: white;
+  }
+  th, td {
+    padding: 12px 10px;
+    text-align: center;
+    border-bottom: 1px solid #ccc;
+    word-wrap: break-word;
+  }
+  tbody tr:hover {
+    background-color: #e6f0ff;
+  }
+  .status {
+    font-weight: 700;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 15px;
+    display: inline-block;
+    min-width: 90px;
+  }
+  .disponible {
+    background-color: #28a745;
+  }
+  .rentada {
+    background-color: #dc3545;
+  }
+  .reparacion {
+    background-color: #ffc107;
+    color: #212529;
+  }
+  .btn-action {
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    padding: 6px 12px;
+    font-weight: 600;
+    color: white;
+    margin: 0 3px;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+  }
+  .btn-edit {
+    background-color: #17a2b8;
+  }
+  .btn-edit:hover {
+    background-color: #117a8b;
+  }
+  .btn-delete {
+    background-color: #dc3545;
+  }
+  .btn-delete:hover {
+    background-color: #a71d2a;
+  }
+  .filter-container {
+    margin-bottom: 25px;
+    text-align: center;
+  }
+  .filter-container select {
+    width: 200px;
+  }
+  .footer {
+    text-align: center;
+    margin-top: 30px;
+    color: #bbb;
+    font-size: 0.9rem;
+  }
+  .btn-valor {
+    background-color: #28a745;
+    border: none;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-top: 10px;
+  }
+  .btn-valor:hover {
+    background-color: #1e7e34;
+  }
+  #modalValor {
+    display: none; 
+    position: fixed;
+    z-index: 9999;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+  }
+  #modalValor .modal-content {
+    background: white;
+    margin: 10% auto;
+    padding: 20px;
+    width: 300px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgb(0 0 0 / 0.25);
+  }
+  #modalValor label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  #modalValor input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 15px;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  #modalValor button {
+    background-color: #2575fc;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #modalValor button:hover {
+    background-color: #1a4fc0;
+  }
+</style>
+</head>
+<body>
+  <h1>Rentacar Villarrica</h1>
+  <p class="lead">Control de unidades: disponibles, rentadas o en reparación, con mantenimiento</p>
+  <div class="app-container">
+    <form id="unidadForm" aria-label="Formulario para agregar o editar unidad" enctype="multipart/form-data">
+      <input type="hidden" id="unidadId" />
+      <input type="text" id="patente" placeholder="Patente (ej: ABC123)" required maxlength="8" />
+      <input type="text" id="modelo" placeholder="Modelo del vehículo" required maxlength="30" />
+      <input type="text" id="rut" placeholder="RUT del arrendatario" />
+      <input type="date" id="fechaInicio" title="Fecha de inicio de renta" />
+      <input type="date" id="fechaFin" title="Fecha de fin de renta" />
+      <input type="file" id="contrato" accept=".pdf,.doc,.docx" />
+      <select id="estado" required>
+        <option value="">Estado de la unidad</option>
+        <option value="Disponible">Disponible</option>
+        <option value="Rentada">Rentada</option>
+        <option value="En Reparacion">En Reparacion</option>
+      </select>
+      <input type="date" id="fechaMantencion" required title="Fecha próxima mantención" />
+      <button type="submit" id="btnGuardar">Agregar Unidad</button>
+    </form>
+    <button class="btn-valor" id="btnAsignarValor">Asignar valores por día</button>
+    <div class="filter-container" aria-label="Filtrar unidades por estado">
+      <label for="filtroEstado" style="color:#444; font-weight:bold; margin-right:8px;">Filtrar por estado:</label>
+      <select id="filtroEstado" aria-controls="tablaUnidades">
+        <option value="Todos">Todos</option>
+        <option value="Disponible">Disponible</option>
+        <option value="Rentada">Rentada</option>
+        <option value="En Reparacion">En Reparacion</option>
+      </select>
+    </div>
+
+    <table aria-describedby="tablaUnidades" role="grid" id="tablaUnidades" aria-live="polite">
+      <thead>
+        <tr>
+          <th>Patente</th>
+          <th>Modelo</th>
+          <th>RUT</th>
+          <th>Fecha Inicio</th>
+          <th>Fecha Fin</th>
+          <th>Días Rentados</th>
+          <th>Valor/Día</th>
+          <th>Estado</th>
+          <th>Próxima Mantención</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="unidadesBody">
+        <!-- Contenido dinámico -->
+      </tbody>
+    </table>
+  </div>
+  <div class="footer">© 2024 Rentacar Villarrica</div>
+
+  <!-- Modal para asignar valor por día -->
+  <div id="modalValor" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDesc">
+    <div class="modal-content">
+      <h3 id="modalTitle">Asignar valor por día</h3>
+      <p id="modalDesc">Ingrese el valor por día para cada unidad</p>
+      <div id="valoresContainer"></div>
+      <button id="guardarValoresBtn">Guardar Valores</button>
+    </div>
+  </div>
+
+<script>
+  // Inicialización de las unidades con los datos que proporcionaste
+  let unidades = [
+    {
+      id: "1",
+      patente: "LRBS77",
+      modelo: "VIRTUS 1.6L AT HIGHLINE",
+      rut: "",
+      valorPorDia: 0,
+      fechaInicio: "",
+      fechaFin: "",
+      estado: "Disponible",
+      fechaMantencion: "2023-12-31"
+    },
+    {
+      id: "2",
+      patente: "LSRX35",
+      modelo: "GOL HIGHLINE 1.6",
+      rut: "",
+      valorPorDia: 0,
+      fechaInicio: "",
+      fechaFin: "",
+      estado: "Disponible",
+      fechaMantencion: "2023-12-31"
+    },
+    {
+      id: "3",
+      patente: "SCSY13",
+      modelo: "GOL 1.6L MT HIGHLINE",
+      rut: "",
+      valorPorDia: 0,
+      fechaInicio: "",
+      fechaFin: "",
+      estado: "Disponible",
+      fechaMantencion: "2023-12-31"
+    },
+    {
+      id: "4",
+      patente: "TJZY21",
+      modelo: "FOTON G7 2.0 MT 4X4",
+      rut: "",
+      valorPorDia: 0,
+      fechaInicio: "",
+      fechaFin: "",
+      estado: "Disponible",
+      fechaMantencion: "2024-04-16"
+    },
+    {
+      id: "5",
+      patente: "KBFP71",
+      modelo: "KIA GRAND CARNIVAL EX 3.3 AUT",
+      rut: "",
+      valorPorDia: 0,
+      fechaInicio: "",
+      fechaFin: "",
+      estado: "Disponible",
+      fechaMantencion: "2024-10-28"
+    },
+    {
+      id: "6",
+      patente: "TLPH37",
+      modelo: "FOTON G7 AT 4X4",
+      rut: "",
+      valorPorDia: 0,
+      fechaInicio: "",
+      fechaFin: "",
+      estado: "Disponible",
+      fechaMantencion: "2024-11-29"
+    }
+  ];
+
+  const form = document.getElementById('unidadForm');
+  const patenteInput = document.getElementById('patente');
+  const modeloInput = document.getElementById('modelo');
+  const rutInput = document.getElementById('rut');
+  const fechaInicioInput = document.getElementById('fechaInicio');
+  const fechaFinInput = document.getElementById('fechaFin');
+  const contratoInput = document.getElementById('contrato');
+  const estadoSelect = document.getElementById('estado');
+  const fechaMantencionInput = document.getElementById('fechaMantencion');
+  const unidadesBody = document.getElementById('unidadesBody');
+  const filtroEstado = document.getElementById('filtroEstado');
+  const unidadIdInput = document.getElementById('unidadId');
+  const btnGuardar = document.getElementById('btnGuardar');
+
+  // Elementos del modal para asignar valores por día
+  const modalValor = document.getElementById('modalValor');
+  const valoresContainer = document.getElementById('valoresContainer');
+  const guardarValoresBtn = document.getElementById('guardarValoresBtn');
+  const btnAsignarValor = document.getElementById('btnAsignarValor');
+
+  cargarUnidades();
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const id = unidadIdInput.value;
+    const patente = patenteInput.value.trim().toUpperCase();
+    const modelo = modeloInput.value.trim();
+    const rut = rutInput.value.trim();
+    const fechaInicio = fechaInicioInput.value;
+    const fechaFin = fechaFinInput.value;
+    const estado = estadoSelect.value;
+    const fechaMantencion = fechaMantencionInput.value;
+
+    if (!patente || !modelo || !estado || !fechaMantencion) {
+      alert('Por favor, complete los campos obligatorios: Patente, Modelo, Estado y Fecha próxima mantención.');
+      return;
+    }
+
+    if (fechaInicio && fechaFin && (new Date(fechaFin) < new Date(fechaInicio))) {
+      alert('La fecha fin de renta no puede ser anterior a la fecha inicio.');
+      return;
+    }
+
+    if (id) {
+      actualizarUnidad(id, { patente, modelo, rut, fechaInicio, fechaFin, estado, fechaMantencion });
+    } else {
+      agregarUnidad({ patente, modelo, rut, fechaInicio, fechaFin, estado, fechaMantencion, valorPorDia: 0 });
+    }
+
+    form.reset();
+    unidadIdInput.value = '';
+    btnGuardar.textContent = 'Agregar Unidad';
+  });
+
+  filtroEstado.addEventListener('change', () => {
+    renderizarTabla();
+  });
+
+  btnAsignarValor.addEventListener('click', () => {
+    abrirModalValores();
+  });
+
+  guardarValoresBtn.addEventListener('click', () => {
+    guardarValores();
+  });
+
+  // Carga de las unidades, con prioridad localStorage
+  function cargarUnidades() {
+    const unidadesGuardadas = localStorage.getItem('unidadesRentacar');
+    if (unidadesGuardadas) {
+      unidades = JSON.parse(unidadesGuardadas);
+    }
+    actualizarEstadosSegunFecha();
+    renderizarTabla();
+  }
+
+  function guardarUnidades() {
+    localStorage.setItem('unidadesRentacar', JSON.stringify(unidades));
+  }
+
+  // Actualiza estado automáticamente según la fechaFin y estado actual
+  function actualizarEstadosSegunFecha() {
+    const hoy = new Date();
+    unidades.forEach(unidad => {
+      if (unidad.estado === 'Rentada' && unidad.fechaFin) {
+        const fin = new Date(unidad.fechaFin);
+        if (fin < hoy) {
+          unidad.estado = 'Disponible';
+          unidad.rut = '';
+          unidad.fechaInicio = '';
+          unidad.fechaFin = '';
+        }
+      }
+    });
+  }
+
+  function agregarUnidad(unidad) {
+    unidad.id = Date.now().toString();
+    if (typeof unidad.valorPorDia === "undefined") unidad.valorPorDia = 0;
+    unidades.push(unidad);
+    actualizarEstadosSegunFecha();
+    guardarUnidades();
+    renderizarTabla();
+  }
+
+  function actualizarUnidad(id, data) {
+    const index = unidades.findIndex(u => u.id === id);
+    if (index === -1) return;
+    if (typeof data.valorPorDia === 'undefined') data.valorPorDia = unidades[index].valorPorDia || 0;
+    unidades[index] = { id, ...data };
+    actualizarEstadosSegunFecha();
+    guardarUnidades();
+    renderizarTabla();
+  }
+
+  function eliminarUnidad(id) {
+    if (!confirm('¿Está seguro de eliminar esta unidad?')) return;
+    unidades = unidades.filter(u => u.id !== id);
+    guardarUnidades();
+    renderizarTabla();
+  }
+
+  function editarUnidad(id) {
+    const unidad = unidades.find(u => u.id === id);
+    if (!unidad) return;
+    patenteInput.value = unidad.patente;
+    modeloInput.value = unidad.modelo;
+    rutInput.value = unidad.rut;
+    fechaInicioInput.value = unidad.fechaInicio;
+    fechaFinInput.value = unidad.fechaFin;
+    estadoSelect.value = unidad.estado;
+    fechaMantencionInput.value = unidad.fechaMantencion;
+    unidadIdInput.value = unidad.id;
+    btnGuardar.textContent = 'Guardar Cambios';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function renderizarTabla() {
+    const filtro = filtroEstado.value;
+    unidadesBody.innerHTML = '';
+
+    const unidadesFiltradas = filtro === 'Todos' ? unidades : unidades.filter(u => u.estado === filtro);
+
+    if (unidadesFiltradas.length === 0) {
+      unidadesBody.innerHTML = '<tr><td colspan="10" style="color:#666;">No hay unidades para mostrar.</td></tr>';
+      return;
+    }
+
+    unidadesFiltradas.forEach(unidad => {
+      const fechaInicio = unidad.fechaInicio ? new Date(unidad.fechaInicio) : null;
+      const fechaFin = unidad.fechaFin ? new Date(unidad.fechaFin) : null;
+      const diasRentados = (fechaInicio && fechaFin)
+        ? Math.ceil((fechaFin - fechaInicio) / (1000 * 60 * 60 * 24)) || 0
+        : 0;
+      const estadoClass = estadoClase(unidad.estado);
+
+      const valorDiaStr = unidad.valorPorDia ? `$${unidad.valorPorDia.toLocaleString()}` : '-';
+
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td>${unidad.patente}</td>
+        <td>${unidad.modelo}</td>
+        <td>${unidad.rut || '-'}</td>
+        <td>${unidad.fechaInicio || '-'}</td>
+        <td>${unidad.fechaFin || '-'}</td>
+        <td>${diasRentados}</td>
+        <td>${valorDiaStr}</td>
+        <td><span class="status ${estadoClass}">${unidad.estado}</span></td>
+        <td>${unidad.fechaMantencion}</td>
+        <td>
+          <button class="btn-action btn-edit" aria-label="Editar unidad ${unidad.patente}" onclick="editarUnidad('${unidad.id}')">Editar</button>
+          <button class="btn-action btn-delete" aria-label="Eliminar unidad ${unidad.patente}" onclick="eliminarUnidad('${unidad.id}')">Eliminar</button>
+        </td>
+      `;
+      unidadesBody.appendChild(tr);
+    });
+  }
+
+  function estadoClase(estado) {
+    switch (estado) {
+      case 'Disponible': return 'disponible';
+      case 'Rentada': return 'rentada';
+      case 'En Reparacion': return 'reparacion';
+      default: return '';
+    }
+  }
+
+  // Modal para editar valores por día
+  function abrirModalValores() {
+    valoresContainer.innerHTML = '';
+    unidades.forEach(unidad => {
+      const div = document.createElement('div');
+      div.style.marginBottom = '10px';
+      div.innerHTML = `
+        <label for="valor_${unidad.id}"><strong>${unidad.patente} - ${unidad.modelo}</strong></label>
+        <input type="number" min="0" id="valor_${unidad.id}" value="${unidad.valorPorDia || 0}" />
+      `;
+      valoresContainer.appendChild(div);
+    });
+    modalValor.style.display = 'block';
+  }
+
+  function guardarValores() {
+    const inputs = valoresContainer.querySelectorAll('input');
+    inputs.forEach(input => {
+      const id = input.id.replace('valor_', '');
+      const valor = parseFloat(input.value);
+      if (!isNaN(valor)) {
+        const unidad = unidades.find(u => u.id === id);
+        if (unidad) {
+          unidad.valorPorDia = valor;
+        }
+      }
+    });
+    guardarUnidades();
+    renderizarTabla();
+    modalValor.style.display = 'none';
+  }
+
+  // Cerrar modal clic fuera contenido
+  window.onclick = function(event) {
+    if (event.target === modalValor) {
+      modalValor.style.display = 'none';
+    }
+  }
+
+  window.editarUnidad = editarUnidad;
+  window.eliminarUnidad = eliminarUnidad;
+</script>
+</body>
+</html>
+
