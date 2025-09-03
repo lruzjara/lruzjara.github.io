@@ -234,3 +234,67 @@
   </script>
 </body>
 </html>
+<!-- Botón para descargar el informe -->
+<button id="btnDescargarInforme" class="btn-valor" style="margin-top: 20px;">Descargar Informe</button>
+
+<script>
+  // Función para calcular días entre dos fechas
+  function calcularDias(fechaInicio, fechaFin) {
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    const diferencia = (fin - inicio) / (1000 * 60 * 60 * 24);
+    return Math.max(0, Math.round(diferencia));
+  }
+
+  // Función para generar y descargar el informe CSV
+  async function generarYDescargarInforme() {
+    try {
+      // Reemplaza esta URL con la ruta real de tu API o backend
+      const response = await fetch('/api/unidades');
+      if (!response.ok) throw new Error('Error al obtener los datos');
+      const unidades = await response.json();
+
+      const encabezados = [
+        'Patente', 'Modelo', 'RUT', 'Fecha Inicio', 'Fecha Fin', 'Días Rentados', 'Valor/Día', 'Estado', 'Próxima Mantención'
+      ];
+
+      const filas = unidades.map(u => {
+        const fechaInicio = u.fechaInicio || '';
+        const fechaFin = u.fechaFin || '';
+        const diasRentados = fechaInicio && fechaFin ? calcularDias(fechaInicio, fechaFin) : 0;
+
+        return [
+          u.patente,
+          u.modelo,
+          u.rut,
+          fechaInicio,
+          fechaFin,
+          diasRentados,
+          u.valorPorDia,
+          u.estado,
+          u.fechaMantencion
+        ];
+      });
+
+      const csvContent = [encabezados, ...filas]
+        .map(fila => fila.map(valor => `"${valor}"`).join(","))
+        .join("\n");
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.setAttribute("href", URL.createObjectURL(blob));
+      link.setAttribute("download", "informe_rentacar_villarrica.csv");
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+    } catch (error) {
+      alert("Hubo un problema al generar el informe: " + error.message);
+      console.error(error);
+    }
+  }
+
+  // Evento del botón
+  document.getElementById('btnDescargarInforme').addEventListener('click', generarYDescargarInforme);
+</script>
